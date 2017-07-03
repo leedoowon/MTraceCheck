@@ -1,0 +1,35 @@
+#
+# mtdiag: multi-threaded random test generation and checking
+#
+# Author: Doowon Lee (doowon@umich.edu)
+# Date: August 5, 2016
+#
+
+gen_mtrand.py
+- generate a multi-threaded test, running the test multiple times
+
+cycle_checker.py
+- creates a dependency graph based on static and dynamic information
+- propagates dependencies assuming they are transitive
+- checks for cyclic dependency
+
+diff_hist.py
+- computes the difference between a pair of executions in execution pool
+- k-medoids clustering implemented... preliminary evaluation on how many medoids are required
+
+instruction.py
+- includes a class definition for instruction, and related functions that are used in conjunction with the class
+
+parse_prog.py
+- parses the generated program from intermediate form (see prog.txt)
+- includes static information (program assembly code, address/consistency dependencies)
+
+parse_hist.py
+- parses the history of loaded values (see hist.txt)
+- includes dynamic information for each of all executions
+
+create_dot_graph.py
+- creates dot graphs from static information (prog.txt) and dynamic information (hist.txt) from multiple executions
+
+rand_stat.py
+- runs md5 checksum for each of the specified files, generating the list of unique md5 checksums (after filtering out duplicated md5 checksums)
