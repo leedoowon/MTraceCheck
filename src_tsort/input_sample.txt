@@ -1,0 +1,5 @@
+../src/log/tsort0.txt
+../src/log/tsort1.txt
+../src/log/tsort2.txt
+../src/log/tsort3.txt
+../src/log/tsort4.txt
