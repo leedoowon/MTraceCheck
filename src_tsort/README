@@ -1,0 +1,4 @@
+tsort.c (tsort_org.c) is copied from GNU Coreutils 8.25
+- tsort.c has been heavily modified to support collective graph checking proposed in ISCA 2017 paper.
+- xalloc-die.c has been lightly modified to remove a redundant error message and header files.
+- The rest of files are unmodified and copied from coreutils-8.25/lib.
