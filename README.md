@@ -10,10 +10,10 @@ This project provides a memory consistency validation framework, called MTraceCh
 
 ## Code structure
 ### src_main
-Most source code files, except for collective graph checker, are included in this directory. Refer to this README(src_main/README.md) for detail.
+Most source code files, except for collective graph checker, are included in this directory. Refer to this [README](src_main/README.md) for detail.
 
 ### src_tsort
-Source code for collective graph checker. Refer to this README.md(src_tsort/README.md) for detail.
+Source code for collective graph checker. Refer to this [README](src_tsort/README.md) for detail.
 
 ### gem5_bug_injection
 
