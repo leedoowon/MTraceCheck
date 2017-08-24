@@ -44,7 +44,8 @@ parser.add_argument("--bss-size-per-thread", default="0x100000")
 parser.add_argument("--bss-file", default="bss.bin")
 parser.add_argument("--result_addr", default="0x400000C0")  # This argument is used only for baremetal system
 parser.add_argument("--execs", type=int, default=-1)
-parser.add_argument("--cpp-file", default="test_manager.cpp")
+parser.add_argument("--cpp-file", default=None)  # This is obsolete, and use --manager-file instead
+parser.add_argument("--manager-file", default="test_manager.cpp")  # This argument is intended to replace "--cpp-file"
 parser.add_argument("--header-file", default="config.h")
 parser.add_argument("--platform", default="linuxpthread")  # linuxpthread or baremetal
 parser.add_argument("--profile-file", default=None)
@@ -59,9 +60,10 @@ assert(args.data_addr.startswith("0x"))
 assert(args.bss_addr.startswith("0x"))
 assert(args.bss_size_per_thread.startswith("0x"))
 assert(args.result_addr.startswith("0x"))
+if (args.cpp_file != None):
+    args.manager_file = args.cpp_file
 
 verbosity = args.verbose
-
 
 if __name__ == "__main__":
     os.system("mkdir -pv %s" % (args.dir))
@@ -94,7 +96,9 @@ if __name__ == "__main__":
     if (args.execs == -1):
         numExecutions = bssSizePerThread / signatureSize
     else:
-        assert(args.execs <= bssSizePerThread / signatureSize)
+        if (args.execs > bssSizePerThread / signatureSize):
+            print("Error: The size of BSS section is smaller than required. Please increase the BSS section size.")
+            assert(False)
         numExecutions = args.execs
 
     if (verbosity > 0):
@@ -123,17 +127,17 @@ if __name__ == "__main__":
             codegen_x86.header_x86(headerPath, threadList, dataBase, args.mem_locs, bssBase, bssSizePerThread, signatureSize, args.reg_width, numExecutions, args.platform, args.no_print)
         elif (args.arch == "arm"):
             codegen_arm.header_arm(headerPath, threadList, dataBase, args.mem_locs, bssBase, resultBase, bssSizePerThread, signatureSize, args.reg_width, numExecutions, args.platform, args.no_print)
-        codegen_common.manager_common(args.header_file, args.data_file, dataBase, args.mem_locs, args.bss_file, bssBase, bssSizePerThread, args.cpp_file, threadList, signatureSize, args.reg_width, numExecutions, args.platform, args.stride_type, verbosity)
+        codegen_common.manager_common(args.header_file, args.data_file, dataBase, args.mem_locs, args.bss_file, bssBase, bssSizePerThread, args.manager_file, threadList, signatureSize, args.reg_width, numExecutions, args.platform, args.stride_type, verbosity)
     else:
         assert(args.platform == "baremetal")
         if (args.arch == "x86"):
             codegen_x86.header_x86(headerPath, threadList, dataBase, args.mem_locs, bssBase, bssSizePerThread, signatureSize, args.reg_width, numExecutions, args.platform, args.no_print)
             codegen_x86.common_x86("%s/%s" % (args.dir, "common.h"))
             codegen_x86.hash_x86("%s/%s" % (args.dir, "binary.cpp"))
-            codegen_x86.manager_x86(args.cpp_file, args.header_file, threadList, signatureSize, args.reg_width, numCores, args.stride_type)
+            codegen_x86.manager_x86(args.manager_file, args.header_file, threadList, signatureSize, args.reg_width, numCores, args.stride_type)
         elif (args.arch == "arm"):
             codegen_arm.header_arm(headerPath, threadList, dataBase, args.mem_locs, bssBase, resultBase, bssSizePerThread, signatureSize, args.reg_width, numExecutions, args.platform, args.no_print, args.exp_original_time)
-            codegen_arm.manager_arm(args.cpp_file, args.header_file, threadList, signatureSize, args.reg_width, numCores, args.stride_type)
+            codegen_arm.manager_arm(args.manager_file, args.header_file, threadList, signatureSize, args.reg_width, numCores, args.stride_type)
         else:
             print("Error: Unsupported ISA %s" % (args.arch))
             sys.exit(1)
