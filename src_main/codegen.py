@@ -27,6 +27,7 @@ import parse_intermediate
 import codegen_common
 import codegen_x86
 import codegen_arm
+import codegen_riscv
 
 parser = argparse.ArgumentParser(description="Arguments for %s" % __file__)
 parser.add_argument("--verbose", "-v", action="count", default=0)
@@ -79,6 +80,8 @@ if __name__ == "__main__":
             numCores = 4
         elif (args.arch == "arm"):
             numCores = 8
+        elif (args.arch == "riscv"):
+            numCores = 2  # NOTE: The very first multi-core version
         else:
             print("Error: Unrecognized architecture %s" % args.arch)
             print("       Cannot decide number of cores")
@@ -127,17 +130,28 @@ if __name__ == "__main__":
             codegen_x86.header_x86(headerPath, threadList, dataBase, args.mem_locs, bssBase, bssSizePerThread, signatureSize, args.reg_width, numExecutions, args.platform, args.no_print)
         elif (args.arch == "arm"):
             codegen_arm.header_arm(headerPath, threadList, dataBase, args.mem_locs, bssBase, resultBase, bssSizePerThread, signatureSize, args.reg_width, numExecutions, args.platform, args.no_print)
+        elif (args.arch == "riscv"):
+            print("Error: Currently RISC-V on Linux Pthreads is unimplemented")
+            sys.exit(1)
+        else:
+            print("Error: Unsupported ISA %s" % (args.arch))
+            sys.exit(1)
         codegen_common.manager_common(args.header_file, args.data_file, dataBase, args.mem_locs, args.bss_file, bssBase, bssSizePerThread, args.manager_file, threadList, signatureSize, args.reg_width, numExecutions, args.platform, args.stride_type, verbosity)
     else:
         assert(args.platform == "baremetal")
         if (args.arch == "x86"):
             codegen_x86.header_x86(headerPath, threadList, dataBase, args.mem_locs, bssBase, bssSizePerThread, signatureSize, args.reg_width, numExecutions, args.platform, args.no_print)
             codegen_x86.common_x86("%s/%s" % (args.dir, "common.h"))
-            codegen_x86.hash_x86("%s/%s" % (args.dir, "binary.cpp"))
+            codegen_x86.hash_x86("%s/%s" % (args.dir, "binary.cpp"), args.header_file)
             codegen_x86.manager_x86(args.manager_file, args.header_file, threadList, signatureSize, args.reg_width, numCores, args.stride_type)
         elif (args.arch == "arm"):
             codegen_arm.header_arm(headerPath, threadList, dataBase, args.mem_locs, bssBase, resultBase, bssSizePerThread, signatureSize, args.reg_width, numExecutions, args.platform, args.no_print, args.exp_original_time)
             codegen_arm.manager_arm(args.manager_file, args.header_file, threadList, signatureSize, args.reg_width, numCores, args.stride_type)
+        elif (args.arch == "riscv"):
+            # FIXME: These functions are created based on ARM's functions; there are unnecessary arguments
+            codegen_riscv.header_riscv(headerPath, threadList, dataBase, args.mem_locs, bssBase, resultBase, bssSizePerThread, signatureSize, args.reg_width, numExecutions, args.platform, args.no_print)
+            codegen_riscv.hash_riscv("%s/%s" % (args.dir, "binary.cpp"), args.header_file)
+            codegen_riscv.manager_riscv(args.manager_file, args.header_file, threadList, signatureSize, args.reg_width, numCores, args.stride_type)
         else:
             print("Error: Unsupported ISA %s" % (args.arch))
             sys.exit(1)
@@ -148,6 +162,8 @@ if __name__ == "__main__":
     elif (args.arch == "arm"):
         stackPointer = {0:0x40800000, 1:0x40900000, 2:0x40A00000, 3:0x40B00000, 4:0x40C00000, 5:0x40D00000, 6:0x40E00000, 7:0x40F00000}
         codegen_arm.test_arm(intermediate, textNamePrefix, textNameSuffix, args.header_file, dataBase, bssBase, bssSizePerThread, stackPointer, signatureSize, args.reg_width, numExecutions, True, args.platform, args.profile_file, numCores, args.stride_type, verbosity)
+    elif (args.arch == "riscv"):
+        codegen_riscv.test_riscv(intermediate, textNamePrefix, textNameSuffix, args.header_file, dataBase, bssBase, bssSizePerThread, signatureSize, args.reg_width, numExecutions, True, args.platform, args.profile_file, numCores, args.stride_type, verbosity)
     else:
         print("Error: Unsupported ISA %s" % (args.arch))
         sys.exit(1)

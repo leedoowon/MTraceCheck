@@ -492,7 +492,7 @@ def manager_arm(cppName, headerName, threadList, signatureSize, regBitWidth, num
     cppString += "#include \"%s\"\n" % headerName
     cppString += "\n"
     cppString += "/*\n"
-    cppString += " * Memmory-mapped SoC registers\n"
+    cppString += " * Memory-mapped SoC registers\n"
     cppString += " */\n"
     cppString += "// Addresses\n"
     cppString += "#define EXYNOS5422_PA_SYSRAM_NS 0x02073000\n"
