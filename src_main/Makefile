@@ -21,13 +21,13 @@
 TARGET_ARCH ?= riscv
 TARGET_OS ?= baremetal
 SIGNATURE ?= 0
-NUM_THREADS ?= 2
+NUM_THREADS ?= 8
 NUM_INSTS ?= 50
 NUM_LOCS ?= 32
-#NUM_EXECS ?= 1024
-NUM_EXECS ?= 1
+NUM_EXECS ?= 1024
+#NUM_EXECS ?= 1
 
-THREADS = $(shell seq 0 $$(($(NUM_THREADS)-1)))
+RAND_SEED ?= 
 
 GEN_DIR ?= gen
 MANAGER_CPP = $(GEN_DIR)/test_manager.cpp
@@ -42,6 +42,7 @@ DUMP_FILE = $(EXECUTABLE).dump
 READELF_FILE = $(EXECUTABLE).readelf
 M5THREADS_DIR = $(HOME)/research/progmm/m5threads-dcec9ee72f99
 
+THREADS = $(shell seq 0 $$(($(NUM_THREADS)-1)))
 
 # NOTE: The BSS size should be larger than (signature size) X (number of executions)
 #       Please change the BSS_SIZE_PER_THREAD if codegen.py gives an error message about BSS section size
@@ -55,6 +56,12 @@ ifeq ($(SIGNATURE),1)
 PROFILE_FLAGS =
 else
 PROFILE_FLAGS = --no-profile
+endif
+
+ifdef RAND_SEED
+TEST_GEN_FLAGS = --rand-seed=$(RAND_SEED)
+else
+TEST_GEN_FLAGS =
 endif
 
 ########################################################################
@@ -95,8 +102,10 @@ else
 PREFIX = /home/doowon/research/freedom/rocket-chip/riscv/bin/riscv64-unknown-elf-
 endif
 CFLAGS = -I./riscv
-DATA_ADDR = 0x60000000
-BSS_ADDR = 0x68000000
+DATA_ADDR = 0x84000000
+BSS_ADDR = 0x88000000
+#DATA_ADDR = 0x60000000
+#BSS_ADDR = 0x68000000
 ifeq ($(TARGET_OS),baremetal)
 all: riscv_baremetal
 else ifeq ($(TARGET_OS),linuxpthread)
@@ -126,7 +135,7 @@ codegen_x86_linuxpthread: test.txt
 
 x86_linuxpthread:
 	# Test generation (in intermediate form)
-	python gen_mtrand.py -v --gen-program --threads=$(NUM_THREADS) --insts=$(NUM_INSTS) --locs=$(NUM_LOCS) --exec=0 --consistency-model=tso
+	python gen_mtrand.py -v $(TEST_GEN_FLAGS) --gen-program --threads=$(NUM_THREADS) --insts=$(NUM_INSTS) --locs=$(NUM_LOCS) --exec=0 --consistency-model=tso
 	python value_profiler.py $(PROFILE_FLAGS) -v prog.txt
 	# Code generation (for target architecture)
 	python codegen.py -v --arch=x86 --reg-width=64 --dir=$(GEN_DIR) --prefix=test_t --suffix=.S --data-addr=$(DATA_ADDR) --mem-locs=$(NUM_LOCS) --data-file=$(DATA_FILE) --bss-addr=$(BSS_ADDR) --bss-size-per-thread=$(BSS_SIZE_PER_THREAD) --bss-file=$(BSS_FILE) --execs=$(NUM_EXECS) --stride-type=2 --manager-file=$(MANAGER_CPP) --platform=linuxpthread --profile-file=profile.txt test.txt
@@ -144,10 +153,10 @@ x86_linuxpthread:
 
 riscv_baremetal:
 	# Test generation (in intermediate form)
-	python gen_mtrand.py --gen-program --threads=$(NUM_THREADS) --insts=$(NUM_INSTS) --locs=$(NUM_LOCS) --exec=0 --consistency-model=ro
+	python gen_mtrand.py $(TEST_GEN_FLAGS) --gen-program --threads=$(NUM_THREADS) --insts=$(NUM_INSTS) --locs=$(NUM_LOCS) --exec=0 --consistency-model=ro
 	python value_profiler.py $(PROFILE_FLAGS) prog.txt
 	# Code generation (for target architecture)
-	python codegen.py -v --arch=riscv --reg-width=64 --dir=$(GEN_DIR) --prefix=test_t --suffix=.S --data-addr=$(DATA_ADDR) --mem-locs=$(NUM_LOCS) --data-file=$(DATA_FILE) --bss-addr=$(BSS_ADDR) --bss-size-per-thread=$(BSS_SIZE_PER_THREAD) --bss-file=$(BSS_FILE) --execs=$(NUM_EXECS) --stride-type=2 --manager-file=$(MANAGER_S) --platform=baremetal --profile-file=profile.txt test.txt
+	python codegen.py -v --arch=riscv --cores=$(NUM_THREADS) --reg-width=64 --dir=$(GEN_DIR) --prefix=test_t --suffix=.S --data-addr=$(DATA_ADDR) --mem-locs=$(NUM_LOCS) --data-file=$(DATA_FILE) --bss-addr=$(BSS_ADDR) --bss-size-per-thread=$(BSS_SIZE_PER_THREAD) --bss-file=$(BSS_FILE) --execs=$(NUM_EXECS) --stride-type=2 --manager-file=$(MANAGER_S) --platform=baremetal --profile-file=profile.txt test.txt
 	# Compile code
 	$(PREFIX)g++ $(CFLAGS) -c -o $(MANAGER_ELF) $(MANAGER_S)
 	$(foreach thread_id,$(THREADS),$(PREFIX)gcc $(CFLAGS) -c -o $(GEN_DIR)/test_t$(thread_id).elf $(GEN_DIR)/test_t$(thread_id).S;)
