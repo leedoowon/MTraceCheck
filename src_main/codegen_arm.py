@@ -303,6 +303,12 @@ def test_arm(intermediate, textNamePrefix, textNameSuffix, headerName, dataBase,
                     armList.append("    movt %s,#0x%X" % (regStore, high16(intermediateCode["value"])))
                 # 3. store data to memory
                 armList.append("    str %s,[%s]" % (regStore, regAddr))
+            # doowon, 2017/09/06, fences added
+            elif (intermediateCode["type"] == "fence"):
+                # FIXME: Decide what fence to be added here
+                print ("Error: ARM fence will be added here")
+                sys.exit(1)
+                #armList.append("    fence")
             elif (intermediateCode["type"] == "profile"):
                 # reg, targets
                 if (not fixedLoadReg):

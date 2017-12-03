@@ -81,7 +81,7 @@ if __name__ == "__main__":
         elif (args.arch == "arm"):
             numCores = 8
         elif (args.arch == "riscv"):
-            numCores = 2  # NOTE: The very first multi-core version
+            numCores = 8
         else:
             print("Error: Unrecognized architecture %s" % args.arch)
             print("       Cannot decide number of cores")
@@ -131,8 +131,7 @@ if __name__ == "__main__":
         elif (args.arch == "arm"):
             codegen_arm.header_arm(headerPath, threadList, dataBase, args.mem_locs, bssBase, resultBase, bssSizePerThread, signatureSize, args.reg_width, numExecutions, args.platform, args.no_print)
         elif (args.arch == "riscv"):
-            print("Error: Currently RISC-V on Linux Pthreads is unimplemented")
-            sys.exit(1)
+            codegen_riscv.header_riscv(headerPath, threadList, dataBase, args.mem_locs, bssBase, resultBase, bssSizePerThread, signatureSize, args.reg_width, numExecutions, args.platform, args.no_print)
         else:
             print("Error: Unsupported ISA %s" % (args.arch))
             sys.exit(1)

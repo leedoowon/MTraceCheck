@@ -226,6 +226,12 @@ def test_x86(intermediate, textNamePrefix, textNameSuffix, headerName, dataBase,
                 x86List.append("    mov $0x%X,%s" % (intermediateCode["value"], regStore))
                 # 3. store data to memory
                 x86List.append("    mov %s,(%s)" % (regStore, regAddr))
+            # doowon, 2017/09/06, fences added
+            elif (intermediateCode["type"] == "fence"):
+                # FIXME: Decide what fence to be added here
+                print ("Error: x86 fence will be added here")
+                sys.exit(1)
+                #x86List.append("    fence")
             elif (intermediateCode["type"] == "profile"):
                 # reg, targets
                 if (not fixedLoadReg):

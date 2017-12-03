@@ -231,6 +231,9 @@ def test_riscv(intermediate, textNamePrefix, textNameSuffix, headerName, dataBas
                 riscvList.append("    li %s,0x%X" % (regStore, intermediateCode["value"]))
                 # 3. store data to memory
                 riscvList.append("    sw %s,0(%s)" % (regStore, regAddr))
+            # doowon, 2017/09/06, fences added
+            elif (intermediateCode["type"] == "fence"):
+                riscvList.append("    fence")
             elif (intermediateCode["type"] == "profile"):
                 # reg, targets
                 if (not fixedLoadReg):

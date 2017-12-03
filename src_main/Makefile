@@ -22,10 +22,14 @@ TARGET_ARCH ?= riscv
 TARGET_OS ?= baremetal
 SIGNATURE ?= 0
 NUM_THREADS ?= 8
-NUM_INSTS ?= 50
+NUM_INSTS ?= 200
 NUM_LOCS ?= 32
 NUM_EXECS ?= 1024
 #NUM_EXECS ?= 1
+STRIDE_TYPE ?= 2
+FENCES_INCLUDED ?= 1
+ENTRY_POINT_ADDRESS ?=
+#ENTRY_POINT_ADDRESS ?= 0x40000000
 
 RAND_SEED ?= 
 
@@ -52,16 +56,17 @@ else
 BSS_SIZE_PER_THREAD = 0x1000000
 endif
 
-ifeq ($(SIGNATURE),1)
 PROFILE_FLAGS =
-else
-PROFILE_FLAGS = --no-profile
+ifneq ($(SIGNATURE),1)
+PROFILE_FLAGS += --no-profile
 endif
 
-ifdef RAND_SEED
-TEST_GEN_FLAGS = --rand-seed=$(RAND_SEED)
-else
 TEST_GEN_FLAGS =
+ifdef RAND_SEED
+TEST_GEN_FLAGS += --rand-seed=$(RAND_SEED)
+endif
+ifeq ($(FENCES_INCLUDED),1)
+TEST_GEN_FLAGS += --with-fences
 endif
 
 ########################################################################
@@ -70,6 +75,11 @@ endif
 ifeq ($(TARGET_ARCH),x86)
 PREFIX = 
 CFLAGS =
+ifdef ENTRY_POINT_ADDRESS
+LDFLAGS = -Wl,--section-start=.text.init=$(ENTRY_POINT_ADDRESS)
+else
+LDFLAGS =
+endif
 ifeq ($(TARGET_OS),baremetal)
 $(error This makefile does not support the x86 baremetal option yet.)
 DATA_ADDR = 0x8000000
@@ -86,6 +96,11 @@ else ifeq ($(TARGET_ARCH),arm)
 $(error This makefile does not support the ARM option yet.)
 PREFIX = /z/odroid/gcc-linaro-arm-linux-gnueabihf-4.7-2013.04-20130415_linux/bin/arm-linux-gnueabihf-
 CFLAGS =
+ifdef ENTRY_POINT_ADDRESS
+LDFLAGS = -Wl,--section-start=.text.init=$(ENTRY_POINT_ADDRESS)
+else
+LDFLAGS =
+endif
 DATA_ADDR = 0x50000000
 BSS_ADDR = 0x60000000
 ifeq ($(TARGET_OS),baremetal)
@@ -97,11 +112,21 @@ endif
 else ifeq ($(TARGET_ARCH),riscv)
 
 ifdef RISCV
-PREFIX = $(RISCV)/bin/riscv64-unknown-elf-
+RISCV_BIN = $(RISCV)/bin/
 else
-PREFIX = /home/doowon/research/freedom/rocket-chip/riscv/bin/riscv64-unknown-elf-
+RISCV_BIN = /home/doowon/research/freedom/rocket-chip/riscv/bin/
+endif
+ifeq ($(TARGET_OS),baremetal)
+PREFIX = $(RISCV_BIN)/riscv64-unknown-elf-
+else
+PREFIX = $(RISCV_BIN)/riscv64-unknown-linux-gnu-
 endif
 CFLAGS = -I./riscv
+ifdef ENTRY_POINT_ADDRESS
+LDFLAGS = -Wl,--section-start=.text.init=$(ENTRY_POINT_ADDRESS)
+else
+LDFLAGS =
+endif
 DATA_ADDR = 0x84000000
 BSS_ADDR = 0x88000000
 #DATA_ADDR = 0x60000000
@@ -109,7 +134,6 @@ BSS_ADDR = 0x88000000
 ifeq ($(TARGET_OS),baremetal)
 all: riscv_baremetal
 else ifeq ($(TARGET_OS),linuxpthread)
-$(error RISC-V linuxpthread option has not been developed yet.)
 all: riscv_linuxpthread
 endif
 
@@ -128,17 +152,17 @@ test_gen_w_signature_code:
 test.txt: test_gen_wo_signature_code
 
 codegen_x86_baremetal: test.txt
-	python codegen.py -vv --arch=x86 --reg-width=64 --dir=$(GEN_DIR) --prefix=test_t --suffix=.S --data-addr=$(DATA_ADDR) --mem-locs=$(NUM_LOCS) --bss-addr=$(BSS_ADDR) --execs=$(NUM_EXECS) --stride-type=2 --manager-file=$(GEN_DIR)/test_manager.S --platform=baremetal test.txt
+	python codegen.py -vv --arch=x86 --reg-width=64 --dir=$(GEN_DIR) --prefix=test_t --suffix=.S --data-addr=$(DATA_ADDR) --mem-locs=$(NUM_LOCS) --bss-addr=$(BSS_ADDR) --execs=$(NUM_EXECS) --stride-type=$(STRIDE_TYPE) --manager-file=$(GEN_DIR)/test_manager.S --platform=baremetal test.txt
 
 codegen_x86_linuxpthread: test.txt
-	python codegen.py -v --arch=x86 --reg-width=64 --dir=$(GEN_DIR) --prefix=test_t --suffix=.S --data-addr=$(DATA_ADDR) --mem-locs=$(NUM_LOCS) --data-file=$(DATA_FILE) --bss-addr=$(BSS_ADDR) --bss-size-per-thread=$(BSS_SIZE_PER_THREAD) --bss-file=$(BSS_FILE) --execs=$(NUM_EXECS) --stride-type=2 --manager-file=$(MANAGER_CPP) --profile-file=profile.txt test.txt
+	python codegen.py -v --arch=x86 --reg-width=64 --dir=$(GEN_DIR) --prefix=test_t --suffix=.S --data-addr=$(DATA_ADDR) --mem-locs=$(NUM_LOCS) --data-file=$(DATA_FILE) --bss-addr=$(BSS_ADDR) --bss-size-per-thread=$(BSS_SIZE_PER_THREAD) --bss-file=$(BSS_FILE) --execs=$(NUM_EXECS) --stride-type=$(STRIDE_TYPE) --manager-file=$(MANAGER_CPP) --profile-file=profile.txt test.txt
 
 x86_linuxpthread:
 	# Test generation (in intermediate form)
 	python gen_mtrand.py -v $(TEST_GEN_FLAGS) --gen-program --threads=$(NUM_THREADS) --insts=$(NUM_INSTS) --locs=$(NUM_LOCS) --exec=0 --consistency-model=tso
 	python value_profiler.py $(PROFILE_FLAGS) -v prog.txt
 	# Code generation (for target architecture)
-	python codegen.py -v --arch=x86 --reg-width=64 --dir=$(GEN_DIR) --prefix=test_t --suffix=.S --data-addr=$(DATA_ADDR) --mem-locs=$(NUM_LOCS) --data-file=$(DATA_FILE) --bss-addr=$(BSS_ADDR) --bss-size-per-thread=$(BSS_SIZE_PER_THREAD) --bss-file=$(BSS_FILE) --execs=$(NUM_EXECS) --stride-type=2 --manager-file=$(MANAGER_CPP) --platform=linuxpthread --profile-file=profile.txt test.txt
+	python codegen.py -v --arch=x86 --reg-width=64 --dir=$(GEN_DIR) --prefix=test_t --suffix=.S --data-addr=$(DATA_ADDR) --mem-locs=$(NUM_LOCS) --data-file=$(DATA_FILE) --bss-addr=$(BSS_ADDR) --bss-size-per-thread=$(BSS_SIZE_PER_THREAD) --bss-file=$(BSS_FILE) --execs=$(NUM_EXECS) --stride-type=$(STRIDE_TYPE) --manager-file=$(MANAGER_CPP) --platform=linuxpthread --profile-file=profile.txt test.txt
 	# Compile code
 	$(PREFIX)ld -b binary -r -o $(TMP_DATA_FILE) $(DATA_FILE)
 	$(PREFIX)ld -b binary -r -o $(TMP_BSS_FILE) $(BSS_FILE)
@@ -146,7 +170,7 @@ x86_linuxpthread:
 	$(PREFIX)objcopy --rename-section .data=.testbss,noload,alloc $(TMP_BSS_FILE)
 	$(PREFIX)g++ $(CFLAGS) -c -o $(MANAGER_ELF) $(MANAGER_CPP)
 	$(foreach thread_id,$(THREADS),$(PREFIX)gcc $(CFLAGS) -c -o $(GEN_DIR)/test_t$(thread_id).elf $(GEN_DIR)/test_t$(thread_id).S;)
-	$(PREFIX)g++ -O3 -static -Wl,--section-start=.testmem=$(DATA_ADDR),--section-start=.testbss=$(BSS_ADDR) -o $(EXECUTABLE) $(GEN_DIR)/*.elf $(TMP_DATA_FILE) $(TMP_BSS_FILE) $(M5THREADS_DIR)/pthread_x86.o
+	$(PREFIX)g++ -O3 -static -Wl,--section-start=.testmem=$(DATA_ADDR),--section-start=.testbss=$(BSS_ADDR) $(LDFLAGS) -o $(EXECUTABLE) $(GEN_DIR)/*.elf $(TMP_DATA_FILE) $(TMP_BSS_FILE) $(M5THREADS_DIR)/pthread_x86.o
 	# Post-processing
 	$(PREFIX)objdump -D $(EXECUTABLE) > $(DUMP_FILE)
 	$(PREFIX)readelf -W -a $(EXECUTABLE) > $(READELF_FILE)
@@ -156,11 +180,31 @@ riscv_baremetal:
 	python gen_mtrand.py $(TEST_GEN_FLAGS) --gen-program --threads=$(NUM_THREADS) --insts=$(NUM_INSTS) --locs=$(NUM_LOCS) --exec=0 --consistency-model=ro
 	python value_profiler.py $(PROFILE_FLAGS) prog.txt
 	# Code generation (for target architecture)
-	python codegen.py -v --arch=riscv --cores=$(NUM_THREADS) --reg-width=64 --dir=$(GEN_DIR) --prefix=test_t --suffix=.S --data-addr=$(DATA_ADDR) --mem-locs=$(NUM_LOCS) --data-file=$(DATA_FILE) --bss-addr=$(BSS_ADDR) --bss-size-per-thread=$(BSS_SIZE_PER_THREAD) --bss-file=$(BSS_FILE) --execs=$(NUM_EXECS) --stride-type=2 --manager-file=$(MANAGER_S) --platform=baremetal --profile-file=profile.txt test.txt
+	python codegen.py -v --arch=riscv --cores=$(NUM_THREADS) --reg-width=64 --dir=$(GEN_DIR) --prefix=test_t --suffix=.S --data-addr=$(DATA_ADDR) --mem-locs=$(NUM_LOCS) --data-file=$(DATA_FILE) --bss-addr=$(BSS_ADDR) --bss-size-per-thread=$(BSS_SIZE_PER_THREAD) --bss-file=$(BSS_FILE) --execs=$(NUM_EXECS) --stride-type=$(STRIDE_TYPE) --manager-file=$(MANAGER_S) --platform=baremetal --profile-file=profile.txt test.txt
 	# Compile code
 	$(PREFIX)g++ $(CFLAGS) -c -o $(MANAGER_ELF) $(MANAGER_S)
 	$(foreach thread_id,$(THREADS),$(PREFIX)gcc $(CFLAGS) -c -o $(GEN_DIR)/test_t$(thread_id).elf $(GEN_DIR)/test_t$(thread_id).S;)
-	$(PREFIX)g++ -O3 -static -nostdlib -nostartfiles -T riscv/link.ld -o $(EXECUTABLE) $(GEN_DIR)/*.elf
+	$(PREFIX)g++ -O3 -static -nostdlib -nostartfiles -T riscv/link.ld $(LDFLAGS) -o $(EXECUTABLE) $(GEN_DIR)/*.elf
+	## Post-processing
+	$(PREFIX)objdump -D $(EXECUTABLE) > $(DUMP_FILE)
+	$(PREFIX)readelf -W -a $(EXECUTABLE) > $(READELF_FILE)
+
+riscv_linuxpthread:
+	# Test generation (in intermediate form)
+	python gen_mtrand.py $(TEST_GEN_FLAGS) --gen-program --threads=$(NUM_THREADS) --insts=$(NUM_INSTS) --locs=$(NUM_LOCS) --exec=0 --consistency-model=ro
+	python value_profiler.py $(PROFILE_FLAGS) prog.txt
+	# Code generation (for target architecture)
+	python codegen.py -v --arch=riscv --cores=$(NUM_THREADS) --reg-width=64 --dir=$(GEN_DIR) --prefix=test_t --suffix=.S --data-addr=$(DATA_ADDR) --mem-locs=$(NUM_LOCS) --data-file=$(DATA_FILE) --bss-addr=$(BSS_ADDR) --bss-size-per-thread=$(BSS_SIZE_PER_THREAD) --bss-file=$(BSS_FILE) --execs=$(NUM_EXECS) --stride-type=$(STRIDE_TYPE) --manager-file=$(MANAGER_CPP) --platform=linuxpthread --profile-file=profile.txt test.txt
+	# Compile code
+	$(PREFIX)ld -b binary -o $(TMP_DATA_FILE) $(DATA_FILE)
+	$(PREFIX)ld -b binary -o $(TMP_BSS_FILE) $(BSS_FILE)
+	$(PREFIX)objcopy --strip-symbol=__global_pointer$$ --strip-symbol=__bss_start --strip-symbol=_edata --strip-symbol=_end $(TMP_DATA_FILE)
+	$(PREFIX)objcopy --strip-symbol=__global_pointer$$ --strip-symbol=__bss_start --strip-symbol=_edata --strip-symbol=_end $(TMP_BSS_FILE)
+	$(PREFIX)objcopy --rename-section .data=.testmem,noload,alloc $(TMP_DATA_FILE)
+	$(PREFIX)objcopy --rename-section .data=.testbss,noload,alloc $(TMP_BSS_FILE)
+	$(PREFIX)g++ $(CFLAGS) -c -o $(MANAGER_ELF) $(MANAGER_CPP)
+	$(foreach thread_id,$(THREADS),$(PREFIX)gcc $(CFLAGS) -c -o $(GEN_DIR)/test_t$(thread_id).elf $(GEN_DIR)/test_t$(thread_id).S;)
+	$(PREFIX)g++ -O3 -static -Wl,--section-start=.testmem=$(DATA_ADDR),--section-start=.testbss=$(BSS_ADDR) -pthread $(LDFLAGS) -o $(EXECUTABLE) $(GEN_DIR)/*.elf $(TMP_DATA_FILE) $(TMP_BSS_FILE)
 	## Post-processing
 	$(PREFIX)objdump -D $(EXECUTABLE) > $(DUMP_FILE)
 	$(PREFIX)readelf -W -a $(EXECUTABLE) > $(READELF_FILE)

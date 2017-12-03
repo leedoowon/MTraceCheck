@@ -29,8 +29,10 @@ class ExecutionState:
 
 class Instruction:
 
+    # doowon, 2017/09/06, fences
+
     ## Class variables
-    # instType: -1 (uninitialized), 0 (load), 1 (store)
+    # instType: -1 (uninitialized), 0 (load), 1 (store), 2 (fence)
     # address: -1 (uninitialized), 0 -- (numMemLocs-1)
     # loadTarget: -1 (uninitialized), 0 -- (numHistRegs-1)
     # value: value that is read in load op
@@ -93,6 +95,12 @@ class Instruction:
         elif (self.instType == 1):
             sys.stdout.write("st ")
             sys.stdout.write("0x%x\n" % (self.address))
+        elif (self.instType == 2):
+            sys.stdout.write("fence")
+            # TODO: Fine-grained fences
+        else:
+            print ("Error: Unrecognized instruction type %d" % self.instType)
+            sys.exit(1)
 
     def getAssembly(self):
         # NOTE: Whenever you change this assembly format, change functions
@@ -105,6 +113,11 @@ class Instruction:
         elif (self.instType == 1):
             string += "st "
             string += "0x%x" % (self.address)
+        elif (self.instType == 2):
+            string += "fence"
+        else:
+            print ("Error: Unrecognized instruction type %d" % self.instType)
+            sys.exit(1)
         return string
 
 def getThreadIndex(memOp):
@@ -126,6 +139,8 @@ def getInstType(asm):
         return 0
     elif (tokens[0] == "st"):
         return 1
+    elif (tokens[0] == "fence"):
+        return 2
     else:
         print("Error: unsupported instruction type when parsing assembly code %s" % asm)
         sys.exit(1)
@@ -142,4 +157,4 @@ def getAddress(asm):
     else:
         # not reachable
         sys.exit(1)
-    
+

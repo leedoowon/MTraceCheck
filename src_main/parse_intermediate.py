@@ -67,6 +67,9 @@ def parseIntermediate(intermediate_file, verbosity):
                 address = int(tokens[0], 16)
                 value = int(tokens[1], 16)
                 intermediate[currThread].append({"type": "st", "addr": address, "value": value})
+            # doowon, 2017/09/06, fences added
+            elif (line.startswith("fence")):
+                intermediate[currThread].append({"type": "fence"})
             elif (line.startswith("profile")):
                 # e.g.: "profile r8,[0xFFFF000A/0x6/0x12/0x15/0x1000C/0x1002D]"
                 tokens = line[8:].split(",")
