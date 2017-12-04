@@ -214,7 +214,7 @@ def test_riscv(intermediate, textNamePrefix, textNameSuffix, headerName, dataBas
                 # 1. construct effective address from immediate
                 riscvList.append("    li %s,0x%X" % (regAddr, absAddr))
                 # 2. load data from memory
-                riscvList.append("    lw %s,0(%s)" % (regLoad, regAddr))
+                riscvList.append("    lwu %s,0(%s)" % (regLoad, regAddr))  # 32-bit unsigned load
             elif (intermediateCode["type"] == "st"):
                 # addr, value
                 if (strideType == 0):
