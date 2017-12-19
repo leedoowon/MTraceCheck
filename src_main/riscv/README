@@ -1,1 +1,1 @@
-The files in this directory (LICENSE, encoding.h, link.ld, riscv-test.h) are adopted from torture test generator in rocket-chip.
+The files in this directory (LICENSE, encoding.h, link.ld, riscv_test.h) are adopted from torture test generator in rocket-chip.

@@ -129,7 +129,7 @@ if __name__ == "__main__":
         if (args.arch == "x86"):
             codegen_x86.header_x86(headerPath, threadList, dataBase, args.mem_locs, bssBase, bssSizePerThread, signatureSize, args.reg_width, numExecutions, args.platform, args.no_print)
         elif (args.arch == "arm"):
-            codegen_arm.header_arm(headerPath, threadList, dataBase, args.mem_locs, bssBase, resultBase, bssSizePerThread, signatureSize, args.reg_width, numExecutions, args.platform, args.no_print)
+            codegen_arm.header_arm(headerPath, threadList, dataBase, args.mem_locs, bssBase, resultBase, bssSizePerThread, signatureSize, args.reg_width, numExecutions, args.platform, args.no_print, args.exp_original_time)
         elif (args.arch == "riscv"):
             codegen_riscv.header_riscv(headerPath, threadList, dataBase, args.mem_locs, bssBase, resultBase, bssSizePerThread, signatureSize, args.reg_width, numExecutions, args.platform, args.no_print)
         else:
