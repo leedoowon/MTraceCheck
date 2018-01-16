@@ -180,7 +180,7 @@ arm_baremetal:
 	python gen_mtrand.py $(TEST_GEN_FLAGS) --gen-program --threads=$(NUM_THREADS) --insts=$(NUM_INSTS) --locs=$(NUM_LOCS) --exec=0 --consistency-model=ro
 	python value_profiler.py $(PROFILE_FLAGS) prog.txt
 	# Code generation (for target architecture)
-	python codegen.py -v --arch=arm --reg-width=64 --dir=$(GEN_DIR) --prefix=test_t --suffix=.S --data-addr=$(DATA_ADDR) --mem-locs=$(NUM_LOCS) --data-file=$(DATA_FILE) --bss-addr=$(BSS_ADDR) --bss-size-per-thread=$(BSS_SIZE_PER_THREAD) --bss-file=$(BSS_FILE) --execs=$(NUM_EXECS) --stride-type=$(STRIDE_TYPE) --manager-file=$(MANAGER_CPP) --platform=baremetal --profile-file=profile.txt test.txt
+	python codegen.py -v --arch=arm --reg-width=32 --dir=$(GEN_DIR) --prefix=test_t --suffix=.S --data-addr=$(DATA_ADDR) --mem-locs=$(NUM_LOCS) --data-file=$(DATA_FILE) --bss-addr=$(BSS_ADDR) --bss-size-per-thread=$(BSS_SIZE_PER_THREAD) --bss-file=$(BSS_FILE) --execs=$(NUM_EXECS) --stride-type=$(STRIDE_TYPE) --manager-file=$(MANAGER_CPP) --platform=baremetal --profile-file=profile.txt test.txt
 	# Compile code
 	$(PREFIX)g++ $(CFLAGS) -c -o $(MANAGER_ELF) $(MANAGER_CPP)
 	$(foreach thread_id,$(THREADS),$(PREFIX)gcc $(CFLAGS) -c -o $(GEN_DIR)/test_t$(thread_id).elf $(GEN_DIR)/test_t$(thread_id).S;)
