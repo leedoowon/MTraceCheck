@@ -174,6 +174,7 @@ def test_riscv(intermediate, textNamePrefix, textNameSuffix, headerName, dataBas
         riscvList.append("    addi %s,%s,1" % (regSync3,regSync3))
         riscvList.append("    li %s,NUM_SHARED_DATA" % (regSync4)) # only for comparison next line
         riscvList.append("    blt %s,%s,1b" % (regSync3,regSync4))
+        riscvList.append("    fence")
         riscvList.append("    # Modify pointer then initialize the old counter")
         riscvList.append("    # NOTE: Make sure to follow this order (pointer -> counter)")
         riscvList.append("    xori %s,%s,0x1" % (regSync2,regSync2))

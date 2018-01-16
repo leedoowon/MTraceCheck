@@ -93,9 +93,8 @@ endif
 
 else ifeq ($(TARGET_ARCH),arm)
 
-$(error This makefile does not support the ARM option yet.)
 PREFIX = /z/odroid/gcc-linaro-arm-linux-gnueabihf-4.7-2013.04-20130415_linux/bin/arm-linux-gnueabihf-
-CFLAGS =
+CFLAGS = -static -march=armv7-a -marm -O3
 ifdef ENTRY_POINT_ADDRESS
 LDFLAGS = -Wl,--section-start=.text.init=$(ENTRY_POINT_ADDRESS)
 else
@@ -106,6 +105,7 @@ BSS_ADDR = 0x60000000
 ifeq ($(TARGET_OS),baremetal)
 all: arm_baremetal
 else ifeq ($(TARGET_OS),linuxpthread)
+$(error This makefile does not support the ARM linuxpthread option yet.)
 all: arm_linuxpthread
 endif
 
@@ -172,6 +172,21 @@ x86_linuxpthread:
 	$(foreach thread_id,$(THREADS),$(PREFIX)gcc $(CFLAGS) -c -o $(GEN_DIR)/test_t$(thread_id).elf $(GEN_DIR)/test_t$(thread_id).S;)
 	$(PREFIX)g++ -O3 -static -Wl,--section-start=.testmem=$(DATA_ADDR),--section-start=.testbss=$(BSS_ADDR) $(LDFLAGS) -o $(EXECUTABLE) $(GEN_DIR)/*.elf $(TMP_DATA_FILE) $(TMP_BSS_FILE) $(M5THREADS_DIR)/pthread_x86.o
 	# Post-processing
+	$(PREFIX)objdump -D $(EXECUTABLE) > $(DUMP_FILE)
+	$(PREFIX)readelf -W -a $(EXECUTABLE) > $(READELF_FILE)
+
+arm_baremetal:
+	# Test generation (in intermediate form)
+	python gen_mtrand.py $(TEST_GEN_FLAGS) --gen-program --threads=$(NUM_THREADS) --insts=$(NUM_INSTS) --locs=$(NUM_LOCS) --exec=0 --consistency-model=ro
+	python value_profiler.py $(PROFILE_FLAGS) prog.txt
+	# Code generation (for target architecture)
+	python codegen.py -v --arch=arm --reg-width=64 --dir=$(GEN_DIR) --prefix=test_t --suffix=.S --data-addr=$(DATA_ADDR) --mem-locs=$(NUM_LOCS) --data-file=$(DATA_FILE) --bss-addr=$(BSS_ADDR) --bss-size-per-thread=$(BSS_SIZE_PER_THREAD) --bss-file=$(BSS_FILE) --execs=$(NUM_EXECS) --stride-type=$(STRIDE_TYPE) --manager-file=$(MANAGER_CPP) --platform=baremetal --profile-file=profile.txt test.txt
+	# Compile code
+	$(PREFIX)g++ $(CFLAGS) -c -o $(MANAGER_ELF) $(MANAGER_CPP)
+	$(foreach thread_id,$(THREADS),$(PREFIX)gcc $(CFLAGS) -c -o $(GEN_DIR)/test_t$(thread_id).elf $(GEN_DIR)/test_t$(thread_id).S;)
+	$(PREFIX)g++ -O3 -static -T arm/link.ld $(LDFLAGS) -o $(EXECUTABLE) $(GEN_DIR)/*.elf
+	## Post-processing
+	$(PREFIX)objcopy -O binary $(EXECUTABLE) $(EXECUTABLE).bin
 	$(PREFIX)objdump -D $(EXECUTABLE) > $(DUMP_FILE)
 	$(PREFIX)readelf -W -a $(EXECUTABLE) > $(READELF_FILE)
 

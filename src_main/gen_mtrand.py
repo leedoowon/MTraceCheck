@@ -81,6 +81,13 @@ import instruction
 #       But memory barrier operations are not handled properly until then.
 #
 
+#
+# doowon, 2017/09/06, fences added
+#
+# FIXME: Edges from/to fences need to be verified if the current implemention are strong enough
+#
+#
+
 
 #def printUsage():
 #    print("Usage: python %s [# threads] [# instructions] [# memory locations] [# outstanding ops]" % (__file__))
@@ -162,6 +169,7 @@ parser.add_argument("--gen-program", action="store_true", help="generate interme
 parser.add_argument("--prog-file", help="intermediate program file name", default="prog.txt")
 parser.add_argument("--wo-file", help="intermediate write-order file name", default="wo.txt")
 parser.add_argument("--no-dump-files", action="store_true", help="do not generate memory dump files", default=False)
+parser.add_argument("--with-fences", action="store_true", default=False)
 args = parser.parse_args()
 
 verbosity = args.verbose
@@ -247,11 +255,18 @@ if (verbosity > 0):
 
 # Every data source should be either from initial value of memory, or stored value
 
-## Type of instruction: load (0), store (1)
+## Type of instruction: load (0), store (1), fence (2)
 randInstType = RandomInteger()
 randInstType.setBinType(0)
-randInstType.addBin(50, 0)  # 50%, 0 (load)
-randInstType.addBin(50, 1)  # 50%, 1 (store)
+if (args.with_fences):
+    ## doowon, 2017/09/06, fences are included in generated test with the probability of 2%
+    # TODO: Flexible percentages
+    randInstType.addBin(49, 0)  # 49%, 0 (load)
+    randInstType.addBin(49, 1)  # 49%, 1 (store)
+    randInstType.addBin( 2, 2)  #  2%, 2 (fence)
+else:
+    randInstType.addBin(50, 0)  # 50%, 0 (load)
+    randInstType.addBin(50, 1)  # 50%, 1 (store)
 if (verbosity > 0):
     randInstType.printBins()
 
@@ -297,20 +312,49 @@ if (verbosity > 0):
 for thread in range(numThreads):
     lastLdIndex = -1
     lastStIndex = -1
+    lastFenceIndex = -1
+    # FIXME: intra dependency edges from/to fences
     for inst in range(len(insts[thread])):
         if (insts[thread][inst].instType == 0):  # if instType == LOAD
             if (orderLdLd and lastLdIndex != -1):
                 insts[thread][inst].addIntraDep(instruction.getMemOp(thread, lastLdIndex))
             if (orderStLd and lastStIndex != -1):
                 insts[thread][inst].addIntraDep(instruction.getMemOp(thread, lastStIndex))
+            if (lastFenceIndex != -1):
+                insts[thread][inst].addIntraDep(instruction.getMemOp(thread, lastFenceIndex))
             lastLdIndex = inst
         elif (insts[thread][inst].instType == 1):  # if instType == STORE
             if (orderLdSt and lastLdIndex != -1):
                 insts[thread][inst].addIntraDep(instruction.getMemOp(thread, lastLdIndex))
             if (orderStSt and lastStIndex != -1):
                 insts[thread][inst].addIntraDep(instruction.getMemOp(thread, lastStIndex))
+            if (lastFenceIndex != -1):
+                insts[thread][inst].addIntraDep(instruction.getMemOp(thread, lastFenceIndex))
             lastStIndex = inst
-        # NOTE: Add here for additional types of instructions (e.g., sync)
+        elif (insts[thread][inst].instType == 2):  # if instType == FENCE
+            # NOTE: dependency to this fence will be created in the next for loop
+            lastFenceIndex = inst
+        else:
+            print ("Error: Unrecognized instruction type %d" % insts[thread][inst].instType)
+    reverseLastFenceIndex = -1
+    for inst in reversed(range(len(insts[thread]))):
+        if (insts[thread][inst].instType == 0):  # if instType == LOAD
+            if (reverseLastFenceIndex != -1):
+                insts[thread][reverseLastFenceIndex].addIntraDep(instruction.getMemOp(thread, inst))
+        elif (insts[thread][inst].instType == 1):  # if instType == STORE
+            if (reverseLastFenceIndex != -1):
+                insts[thread][reverseLastFenceIndex].addIntraDep(instruction.getMemOp(thread, inst))
+        elif (insts[thread][inst].instType == 2):  # if instType == FENCE
+            if (reverseLastFenceIndex != -1):
+                insts[thread][reverseLastFenceIndex].addIntraDep(instruction.getMemOp(thread, inst))
+            reverseLastFenceIndex = inst
+        else:
+            print ("Error: Unrecognized instruction type %d" % insts[thread][inst].instType)
+    # Avoid using these temporary variables accidentally later on
+    del lastLdIndex
+    del lastStIndex
+    del lastFenceIndex
+    del reverseLastFenceIndex
 
 ## Program order (same address)
 # This code assumes cache coherency by creating edges for same address for:
@@ -365,7 +409,7 @@ if (args.gen_program):
             instructionLine += "\n"
             progFP.write(instructionLine)
         if (orderStSt):
-            # NOTE: Current implementation does not handle memory barriers
+            # doowon, 2017/09/06, FIXME: Write order needs to handle fences
             woDict = dict()
             for inst in range(len(insts[thread])):
                 # [thread id]/[memory location]#[inst idx 1]#[inst idx 2]#...
@@ -489,6 +533,9 @@ for executionIndex in range(numExecutions):
         elif (insts[thread][inst].instType == 1):  # if instType == STORE
             storeAddress = insts[thread][inst].address
             mem[storeAddress] = instruction.getMemOp(thread, inst)
+        elif (insts[thread][inst].instType == 2):  # if instType == FENCE
+            # Fences do not have any effect in registers or memory
+            pass
 
         # 2. Update instruction execution status
         insts[thread][inst].exeState = instruction.ExecutionState.PERFORMED

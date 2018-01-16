@@ -235,6 +235,7 @@ def test_arm(intermediate, textNamePrefix, textNameSuffix, headerName, dataBase,
         armList.append("    add %s,%s,#1" % (regSync3,regSync3))
         armList.append("    cmp %s,#NUM_SHARED_DATA" % (regSync3))
         armList.append("    blo 1b")
+        armList.append("    dmb")  # doowon, 2018/01/04
         armList.append("    @ Modify pointer then initialize the old counter")
         armList.append("    @ NOTE: Make sure to follow this order (pointer -> counter)")
         armList.append("    eor %s,%s,#0x1" % (regSync2,regSync2))
@@ -305,10 +306,7 @@ def test_arm(intermediate, textNamePrefix, textNameSuffix, headerName, dataBase,
                 armList.append("    str %s,[%s]" % (regStore, regAddr))
             # doowon, 2017/09/06, fences added
             elif (intermediateCode["type"] == "fence"):
-                # FIXME: Decide what fence to be added here
-                print ("Error: ARM fence will be added here")
-                sys.exit(1)
-                #armList.append("    fence")
+                armList.append("    dmb")
             elif (intermediateCode["type"] == "profile"):
                 # reg, targets
                 if (not fixedLoadReg):
@@ -691,7 +689,7 @@ def manager_arm(cppName, headerName, threadList, signatureSize, regBitWidth, num
     cppString += "    // 2. Run test program\n"
     cppString += "    setup_sdtt_page_table(PAGE_TABLE_BASE_1);\n"
     cppString += "    test_manager();\n"
-    #cppString += "    return 0;\n"  # FIXME
+    #cppString += "    return 0;\n"  # FIXME: delete this... this is for debugging
     cppString += "\n"
     cppString += "    // 3. Analyze test results\n"
     cppString += "    setup_ldtt_page_table(PAGE_TABLE_BASE_0);\n"
