@@ -303,7 +303,7 @@ def test_riscv(intermediate, textNamePrefix, textNameSuffix, headerName, dataBas
             riscvList.append("    add %s,%s,%s" % (regTemp, regTemp, regCurrBssAddr))
             riscvList.append("    sw zero,(%s)" % (regTemp))
         riscvList.append("    addi %s,%s,1" % (regExecCount, regExecCount))
-        riscvList.append("    li %s,%d" % (regTemp, numExecutions))
+        riscvList.append("    li %s,(EXECUTION_COUNT)" % (regTemp, numExecutions))
         riscvList.append("    blt %s,%s,t%d_exec_loop" % (regExecCount, regTemp, thread))
         # Epilogue code
         riscvList.append("## Epilogue code")
