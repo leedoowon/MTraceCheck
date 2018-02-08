@@ -378,7 +378,7 @@ def test_arm(intermediate, textNamePrefix, textNameSuffix, headerName, dataBase,
             armList.append("    str %s,[%s,%s,LSL#%d]" % (regSignature, regCurrBssAddr, regExecCount, math.log(signatureSize, 2)))
 
         armList.append("    add %s,%s,#1" % (regExecCount, regExecCount))
-        armList.append("    cmp %s,#(EXECUTION_COUNT)" % (regExecCount, numExecutions))
+        armList.append("    cmp %s,#(EXECUTION_COUNT)" % (regExecCount))
         armList.append("    blo t%d_exec_loop" % (thread))
         # Epilogue code
         armList.append("@@ Epilogue code")
