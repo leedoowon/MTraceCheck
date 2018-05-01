@@ -127,10 +127,12 @@ LDFLAGS = -Wl,--section-start=.text.init=$(ENTRY_POINT_ADDRESS)
 else
 LDFLAGS =
 endif
-DATA_ADDR = 0x84000000
-BSS_ADDR = 0x88000000
-#DATA_ADDR = 0x60000000
-#BSS_ADDR = 0x68000000
+# Cached memory region
+#DATA_ADDR = 0x84000000
+#BSS_ADDR = 0x88000000
+# Uncached memory region
+DATA_ADDR = 0x60000000
+BSS_ADDR = 0x68000000
 ifeq ($(TARGET_OS),baremetal)
 all: riscv_baremetal
 else ifeq ($(TARGET_OS),linuxpthread)

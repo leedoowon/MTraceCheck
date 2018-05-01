@@ -291,17 +291,20 @@ def test_riscv(intermediate, textNamePrefix, textNameSuffix, headerName, dataBas
             else:
                 print("Error: Unrecognized intermediate opcode %s" % (intermediateCode["type"]))
                 sys.exit(1)
-        riscvList.append("    li %s,(TEST_BSS_SECTION + %d * TEST_BSS_SIZE_PER_THREAD)" % (regCurrBssAddr, threadIdx))
-        riscvList.append("    addi %s,%s,%d" % (regCurrBssAddr, regCurrBssAddr, signatureFlushCount * regBitWidth / 8))
-        riscvList.append("    slli %s,%s,%d" % (regTemp, regExecCount, math.log(signatureSize, 2)))
-        riscvList.append("    add %s,%s,%s" % (regTemp, regTemp, regCurrBssAddr))
-        riscvList.append("    sw %s,(%s)" % (regSignature, regTemp))
-        # Fill zero for upper signature (assuming that BSS is not initialized to 0)
-        for i in range((signatureFlushCount + 1) * regBitWidth / 8, signatureSize, regBitWidth / 8):
-            riscvList.append("    addi %s,%s,%d" % (regCurrBssAddr, regCurrBssAddr, regBitWidth / 8))
+        # doowon, 2018/02/09, save signature only when there is at least one profile statement
+        if profileCount > 0:
+            riscvList.append("    li %s,(TEST_BSS_SECTION + %d * TEST_BSS_SIZE_PER_THREAD)" % (regCurrBssAddr, threadIdx))
+            riscvList.append("    addi %s,%s,%d" % (regCurrBssAddr, regCurrBssAddr, signatureFlushCount * regBitWidth / 8))
             riscvList.append("    slli %s,%s,%d" % (regTemp, regExecCount, math.log(signatureSize, 2)))
             riscvList.append("    add %s,%s,%s" % (regTemp, regTemp, regCurrBssAddr))
-            riscvList.append("    sw zero,(%s)" % (regTemp))
+            riscvList.append("    sw %s,(%s)" % (regSignature, regTemp))
+            # Fill zero for upper signature (assuming that BSS is not initialized to 0)
+            for i in range((signatureFlushCount + 1) * regBitWidth / 8, signatureSize, regBitWidth / 8):
+                riscvList.append("    addi %s,%s,%d" % (regCurrBssAddr, regCurrBssAddr, regBitWidth / 8))
+                riscvList.append("    slli %s,%s,%d" % (regTemp, regExecCount, math.log(signatureSize, 2)))
+                riscvList.append("    add %s,%s,%s" % (regTemp, regTemp, regCurrBssAddr))
+                riscvList.append("    sw zero,(%s)" % (regTemp))
+
         riscvList.append("    addi %s,%s,1" % (regExecCount, regExecCount))
         riscvList.append("    li %s,(EXECUTION_COUNT)" % (regTemp))
         riscvList.append("    blt %s,%s,t%d_exec_loop" % (regExecCount, regTemp, thread))

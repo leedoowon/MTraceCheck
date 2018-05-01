@@ -367,15 +367,17 @@ def test_arm(intermediate, textNamePrefix, textNameSuffix, headerName, dataBase,
             else:
                 print("Error: Unrecognized intermediate opcode %s" % (intermediateCode["type"]))
                 sys.exit(1)
-        armList.append("    movw %s,#:lower16:(TEST_BSS_SECTION + %d * TEST_BSS_SIZE_PER_THREAD)" % (regCurrBssAddr, threadIdx))
-        armList.append("    movt %s,#:upper16:(TEST_BSS_SECTION + %d * TEST_BSS_SIZE_PER_THREAD)" % (regCurrBssAddr, threadIdx))
-        armList.append("    add %s,%s,#%d" % (regCurrBssAddr, regCurrBssAddr, signatureFlushCount * regBitWidth / 8))
-        armList.append("    str %s,[%s,%s,LSL#%d]" % (regSignature, regCurrBssAddr, regExecCount, math.log(signatureSize, 2)))
-        # Fill zero for upper signature (assuming that BSS is not initialized to 0)
-        for i in range((signatureFlushCount + 1) * regBitWidth / 8, signatureSize, regBitWidth / 8):
-            armList.append("    add %s,%s,#%d" % (regCurrBssAddr, regCurrBssAddr, regBitWidth / 8))
-            armList.append("    mov %s,#0" % (regSignature))
+        # doowon, 2018/02/09, save signature only when there is at least one profile statement
+        if profileCount > 0:
+            armList.append("    movw %s,#:lower16:(TEST_BSS_SECTION + %d * TEST_BSS_SIZE_PER_THREAD)" % (regCurrBssAddr, threadIdx))
+            armList.append("    movt %s,#:upper16:(TEST_BSS_SECTION + %d * TEST_BSS_SIZE_PER_THREAD)" % (regCurrBssAddr, threadIdx))
+            armList.append("    add %s,%s,#%d" % (regCurrBssAddr, regCurrBssAddr, signatureFlushCount * regBitWidth / 8))
             armList.append("    str %s,[%s,%s,LSL#%d]" % (regSignature, regCurrBssAddr, regExecCount, math.log(signatureSize, 2)))
+            # Fill zero for upper signature (assuming that BSS is not initialized to 0)
+            for i in range((signatureFlushCount + 1) * regBitWidth / 8, signatureSize, regBitWidth / 8):
+                armList.append("    add %s,%s,#%d" % (regCurrBssAddr, regCurrBssAddr, regBitWidth / 8))
+                armList.append("    mov %s,#0" % (regSignature))
+                armList.append("    str %s,[%s,%s,LSL#%d]" % (regSignature, regCurrBssAddr, regExecCount, math.log(signatureSize, 2)))
 
         armList.append("    add %s,%s,#1" % (regExecCount, regExecCount))
         armList.append("    cmp %s,#(EXECUTION_COUNT)" % (regExecCount))

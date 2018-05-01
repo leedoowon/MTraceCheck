@@ -292,17 +292,19 @@ def test_x86(intermediate, textNamePrefix, textNameSuffix, headerName, dataBase,
             else:
                 print("Error: Unrecognized intermediate opcode %s" % (intermediateCode["type"]))
                 sys.exit(1)
-        x86List.append("    mov $(TEST_BSS_SECTION + %d * TEST_BSS_SIZE_PER_THREAD + 0x%X),%s" % (threadIdx, signatureFlushCount * regBitWidth / 8, regCurrBssAddr))
-        tempSignatureOffset = signatureSize
-        if (tempSignatureOffset > 8):
-            # If signature is larger than signature offset, it must be a multiple of 8
-            assert(tempSignatureOffset % 8 == 0)
-            while (tempSignatureOffset >= 8):
-                x86List.append("    lea (%s,%s,8),%s" % (regCurrBssAddr, regExecCount, regCurrBssAddr))
-                tempSignatureOffset -= 8
-        else:
-            x86List.append("    lea (%s,%s,%d),%s" % (regCurrBssAddr, regExecCount, signatureSize, regCurrBssAddr))
-        x86List.append("    mov %s,(%s)" % (regSignature, regCurrBssAddr))
+        # doowon, 2018/02/09, save signature only when there is at least one profile statement
+        if profileCount > 0:
+            x86List.append("    mov $(TEST_BSS_SECTION + %d * TEST_BSS_SIZE_PER_THREAD + 0x%X),%s" % (threadIdx, signatureFlushCount * regBitWidth / 8, regCurrBssAddr))
+            tempSignatureOffset = signatureSize
+            if (tempSignatureOffset > 8):
+                # If signature is larger than signature offset, it must be a multiple of 8
+                assert(tempSignatureOffset % 8 == 0)
+                while (tempSignatureOffset >= 8):
+                    x86List.append("    lea (%s,%s,8),%s" % (regCurrBssAddr, regExecCount, regCurrBssAddr))
+                    tempSignatureOffset -= 8
+            else:
+                x86List.append("    lea (%s,%s,%d),%s" % (regCurrBssAddr, regExecCount, signatureSize, regCurrBssAddr))
+            x86List.append("    mov %s,(%s)" % (regSignature, regCurrBssAddr))
 
         x86List.append("    inc %s" % (regExecCount))
         x86List.append("    cmp $EXECUTION_COUNT,%s" % (regExecCount))
